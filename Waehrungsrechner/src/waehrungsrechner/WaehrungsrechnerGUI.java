@@ -1,127 +1,113 @@
 package waehrungsrechner;
 
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-public class WaehrungsrechnerGUI extends Application {
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
-    @Override
-    public void start(Stage stage) {
+public class WaehrungsrechnerGUI extends JPanel {
+	private JLabel titel;
+	private JLabel ergebnis;
+	private JTextField betrag;
 
-        // Überschrift
-        Label titel = new Label("Währungsrechner");
+	private JComboBox<Waehrung> von;
+	private JComboBox<Waehrung> nach;
 
-        // Eingabefeld
-        TextField betrag = new TextField();
-        betrag.setPromptText("Betrag eingeben");
+	private JButton umrechnen;
+	private JButton zuruecksetzen;
 
-        // Währungen auswählen
-        ComboBox<Waehrung> von = new ComboBox<>();
+	public WaehrungsrechnerGUI() {
+		setPreferredSize(new Dimension(400, 300));
+		setLayout(new GridLayout(7, 1, 5, 5));
 
-        von.getItems().addAll(
-            new Euro(),
-            new Dollar()
-        );
+		// Titel
+		titel = new JLabel("Währungsrechner");
+		add(titel);
 
-        von.setValue(von.getItems().get(0));
+		// Betrag eingeben
+		betrag = new JTextField();
+		betrag.setToolTipText("Betrag eingeben");
+		add(betrag);
 
-        ComboBox<Waehrung> nach = new ComboBox<>();
+		// Ausgangswährung auswählen
+		von = new JComboBox<>();
+		von.addItem(new Euro());
+		von.addItem(new Dollar());
+		von.setSelectedIndex(0);
+		add(von);
 
-        nach.getItems().addAll(
-            new Euro(),
-            new Dollar()
-        );
+		// Zielwährung auswählen
+		nach = new JComboBox<>();
+		nach.addItem(new Euro());
+		nach.addItem(new Dollar());
+		nach.setSelectedIndex(1);
+		add(nach);
 
-        nach.setValue(nach.getItems().get(1));
+		// Buttons
+		umrechnen = new JButton("Umrechnen");
+		zuruecksetzen = new JButton("Zurücksetzen");
 
-        // Buttons
-        Button umrechnen = new Button("Umrechnen");
-        Button zuruecksetzen = new Button("Zurücksetzen");
+		add(umrechnen);
+		add(zuruecksetzen);
 
-        // Ergebnisanzeige
-        Label ergebnis = new Label("Ergebnis erscheint hier");
+		// Ergebnis
+		ergebnis = new JLabel("Ergebnis erscheint hier");
+		add(ergebnis);
 
-        // Umrechnungsobjekt erstellen
-        Umrechnen rechner = new Umrechnen();
+		// ActionListener
+		ActionListener listener = new ActionListener() {
 
-        // Button: Umrechnen
-        umrechnen.setOnAction(e -> {
+			@Override
+			public void actionPerformed(ActionEvent e) {
 
-            try {
+				if (e.getSource() == umrechnen) {
+					berechne();
+				}
 
-                // Betrag auslesen
-                double wert = Double.parseDouble(
-                    betrag.getText().replace(",", ".")
-                );
+				if (e.getSource() == zuruecksetzen) {
+					betrag.setText("");
+					ergebnis.setText("Ergebnis erscheint hier");
+				}
+			}
+		};
 
-                // Ausgewählte Währungen auslesen
-                Waehrung waehrungVon = von.getValue();
-                Waehrung waehrungNach = nach.getValue();
+		umrechnen.addActionListener(listener);
+		zuruecksetzen.addActionListener(listener);
 
-                // Wechselkurs berechnen
-                double wechselkurs =
-                    waehrungNach.getKurs() / waehrungVon.getKurs();
+	}
 
-                // Umrechnung durchführen
-                double result = rechner.umrechnen(
-                    wert, wechselkurs
-                );
+	private void berechne() {
 
-                // Ergebnis anzeigen
-                ergebnis.setText(
-                    String.format(
-                        "Ergebnis: %.2f %s",
-                        result,
-                        waehrungNach.getSymbol()
-                    )
-                );
+		try {
+			double wert = Double.parseDouble(betrag.getText().replace(",", "."));
 
-            } catch (NumberFormatException ex) {
+			Waehrung waehrungVon = (Waehrung) von.getSelectedItem();
+			Waehrung waehrungNach = (Waehrung) nach.getSelectedItem();
 
-                ergebnis.setText(
-                    "Bitte einen gültigen Betrag eingeben!"
-                );
+			if (waehrungVon == null || waehrungNach == null) {
+				ergebnis.setText("Bitte Währungen auswählen!");
+				return;
+			}
 
-            }
-        });
+			// Umrechnungskurs berechnen
+			double wechselkurs = waehrungNach.getKurs() / waehrungVon.getKurs();
 
-        // Button: Zurücksetzen
-        zuruecksetzen.setOnAction(e -> {
+			// Umrechnung durchführen
+			Umrechnen rechner = new Umrechnen();
 
-            betrag.clear();
+			double resultat = rechner.umrechnen(wert, wechselkurs);
 
-            von.setValue(von.getItems().get(0));
-            nach.setValue(nach.getItems().get(1));
+			ergebnis.setText(String.format("Ergebnis: %.2f %s", resultat, waehrungNach.getSymbol()));
 
-            ergebnis.setText("Ergebnis erscheint hier");
+		} catch (NumberFormatException ex) {
+			ergebnis.setText("Bitte einen gültigen Betrag eingeben!");
+		}
+	}
 
-        });
-
-        // Layout
-        VBox layout = new VBox(15);
-
-        layout.getChildren().addAll(
-            titel,
-            betrag,
-            von,
-            nach,
-            umrechnen,
-            zuruecksetzen,
-            ergebnis
-        );
-
-        // Fenster
-        Scene scene = new Scene(layout, 400, 350);
-
-        stage.setTitle("Währungsrechner");
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    public static void startProgramm(String[] args) {
-        launch(args);
-    }
 }
